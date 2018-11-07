@@ -1,16 +1,13 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"net"
 	"os"
 	"time"
 
 	ping "github.com/digineo/go-ping"
-	"github.com/lib/pq"
 )
 
 type taskStruct struct {
@@ -42,74 +39,49 @@ const (
 	maxGoroutines = 128
 )
 
-//2018/10/12 09:57:38 getTasks - ERROR while querying for max ip: sql: Scan error on column index 0, name "max": converting driver.Value type <nil> ("<nil>") to a uint32: invalid syntax
+var dbPassword = os.Getenv("DB_PASSWORD")
 
 type envStruct struct {
-	dbAddr     string
-	dbPort     int
-	dbName     string
-	dbUser     string
-	dbPassword string
-	dbTable    string
-	dbConn     *sql.DB
+	dbConn DB
 }
 
 func (env *envStruct) initialize() {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", env.dbAddr, env.dbPort, env.dbUser, env.dbPassword, env.dbName)
-	var err error
-	env.dbConn, err = sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal(err)
+	if err := env.dbConn.Open(); err != nil {
+		log.Fatalf("[FATAL] Cannot open connection to database: %+v", err)
 	}
 
-	if err = env.dbConn.Ping(); err != nil {
-		log.Fatalf("getTasks - DB not pinged: %s", err)
+	if err := env.dbConn.Ping(); err != nil {
+		log.Fatalf("[FATAL] Cannot ping DB: %v", err)
 	}
 
-	log.Println("getTasks - Creating table if not exists..")
-	_, err = env.dbConn.Query(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		ip int PRIMARY KEY,
-		ping bool
-	);
-	`, env.dbTable))
-	if err != nil {
-		log.Fatalf("getTasks - Creating table failed: %s", err)
+	log.Println("[INFO] Creating table if not exists..")
+	if err := env.dbConn.CreateTable(); err != nil {
+		log.Fatalf("[FATAL] Table creation failed: %v", err)
 	}
-	log.Println("getTasks - Creating table finished")
+	log.Println("[INFO] Table creation finished")
 
 }
 
 func (env *envStruct) getTasks(tasksCh chan taskStruct) {
-
-	var maxIP uint32
-	log.Println("getTasks - Requesting records..")
-	sqlStatement := fmt.Sprintf("SELECT MAX(ip) from %s;", env.dbTable)
-	row := env.dbConn.QueryRow(sqlStatement)
-	switch err := row.Scan(&maxIP); err {
-	case sql.ErrNoRows:
-		log.Println("getTasks - No rows were, assigning 0")
-		maxIP = 0
-	case nil:
-		log.Printf("getTasks - maxIP: %d", maxIP)
-	default:
-		log.Printf("getTasks - ERROR while querying for max ip: %s", err)
+	curIP, err := env.dbConn.GetMaxIP()
+	if err != nil {
+		log.Printf("[INFO] Could not get curIP from db: %+v", err)
+		log.Printf("[INFO] Using 0 for curIP")
 	}
 
-	var curIP uint32
-	curIP = maxIP + 1
+	curIP++
 	for {
-		log.Printf("getTasks - Sending task with ip=%d", curIP)
+		log.Printf("[INFO] getTasks: Sending task with ip=%d", curIP)
 		tasksCh <- taskStruct{ip: curIP}
 		curIP++
 	}
-
 }
 
 func pingf(ip uint32, resultCh chan taskStruct, guard chan struct{}) {
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, ip)
 
-	log.Printf("pingf - Pinging %v", ip)
+	log.Printf("[INFO] pingf: Pinging %v", ip)
 
 	p, err := ping.New("0.0.0.0", "")
 	if err != nil {
@@ -126,7 +98,7 @@ func pingf(ip uint32, resultCh chan taskStruct, guard chan struct{}) {
 	} else {
 		success = false
 	}
-	log.Printf("pingf - %d : %v", ip, success)
+	log.Printf("[INFO] pingf: %d : %v", ip, success)
 
 	resultCh <- taskStruct{ip: ip, ping: success}
 	<-guard
@@ -141,7 +113,6 @@ func schedule(taskCh, resultCh chan taskStruct) {
 			go pingf(task.ip, resultCh, guard)
 		}
 	}
-
 }
 
 func aggregate(resultCh chan taskStruct, statCh chan tasksStruct) {
@@ -152,7 +123,7 @@ func aggregate(resultCh chan taskStruct, statCh chan tasksStruct) {
 		case result := <-resultCh:
 			results = append(results, result)
 			if len(results) == dbPublishSize {
-				log.Printf("aggregate - Sending aggregated results: %v", results)
+				log.Printf("[INFO] Aggregate: Sending aggregated results: %v", results)
 				copy(finalResults, results)
 				statCh <- finalResults
 				results = results[:0]
@@ -165,74 +136,21 @@ func (env *envStruct) sendStat(statCh chan tasksStruct) {
 	for {
 		select {
 		case results := <-statCh:
-
-			log.Printf("sendStat - START: %v", results)
-			txn, err := env.dbConn.Begin()
-			if err != nil {
-				log.Println("begin")
-				log.Fatal(err)
+			if err := env.dbConn.Save(results); err != nil {
+				log.Printf("[ERROR] Problem at saving result to database: %s", err)
 			}
-
-			stmt, err := txn.Prepare(pq.CopyIn(env.dbTable, "ip", "ping"))
-			if err != nil {
-				log.Println("copyin")
-				log.Fatal(err)
-			}
-
-			for _, result := range results {
-				_, err = stmt.Exec(result.ip, result.ping)
-				// log.Printf("res: %v", res)
-
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			_, err = stmt.Exec()
-			if err != nil {
-				log.Printf("%+v", err)
-				log.Printf("%#+v", err)
-				log.Fatal(err)
-			}
-			// log.Printf("res: %v", res)
-
-			err = stmt.Close()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			err = txn.Commit()
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Println("sendStat - END")
 		}
 	}
 }
 
 func main() {
-	log.Println("Worldping started")
+	log.Println("[INFO] Worldping started")
 
 	taskCh := make(chan taskStruct)
 	resultCh := make(chan taskStruct)
 	statCh := make(chan tasksStruct)
 
-	env := envStruct{
-		dbAddr:     dbAddr,
-		dbPort:     dbPort,
-		dbName:     dbName,
-		dbUser:     dbUser,
-		dbPassword: os.Getenv("DB_PASSWORD"),
-		dbTable:    dbTable,
-	}
-
-	p, err := ping.New("0.0.0.0", "")
-	if err != nil {
-		panic(err)
-	}
-	pinger := p
-
-	_, err = pinger.Ping(&net.IPAddr{IP: []byte{2, 2, 2, 2}}, 10*time.Second)
+	env := envStruct{dbConn: &Postgres{}}
 
 	env.initialize()
 

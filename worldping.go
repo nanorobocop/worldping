@@ -8,21 +8,12 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/nanorobocop/worldping/db"
+	"github.com/nanorobocop/worldping/task"
 	"github.com/shirou/gopsutil/load"
 
 	ping "github.com/digineo/go-ping"
 )
-
-type taskStruct struct {
-	ip   uint32
-	ping bool
-}
-
-type tasksStruct []taskStruct
-
-type taskGetter interface {
-	getTasks()
-}
 
 const (
 	dbPublishSize = 10000
@@ -38,7 +29,7 @@ var dbName = os.Getenv("DB_NAME")
 var dbTable = os.Getenv("DB_TABLE")
 
 type envStruct struct {
-	dbConn DB
+	dbConn db.DB
 }
 
 func (env *envStruct) initialize() {
@@ -58,7 +49,7 @@ func (env *envStruct) initialize() {
 
 }
 
-func (env *envStruct) getTasks(tasksCh chan taskStruct) {
+func (env *envStruct) getTasks(tasksCh chan task.Task) {
 	curIP, err := env.dbConn.GetMaxIP()
 	if err != nil {
 		log.Printf("[INFO] Could not get curIP from db: %+v", err)
@@ -68,12 +59,12 @@ func (env *envStruct) getTasks(tasksCh chan taskStruct) {
 	curIP++
 	for {
 		log.Printf("[INFO] getTasks: Sending task with ip=%d", curIP)
-		tasksCh <- taskStruct{ip: curIP}
+		tasksCh <- task.Task{IP: curIP}
 		curIP++
 	}
 }
 
-func pingf(ip uint32, resultCh chan taskStruct, guard chan struct{}) {
+func pingf(ip uint32, resultCh chan task.Task, guard chan struct{}) {
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, ip)
 
@@ -96,11 +87,11 @@ func pingf(ip uint32, resultCh chan taskStruct, guard chan struct{}) {
 	}
 	log.Printf("[INFO] pingf: %d : %v", ip, success)
 
-	resultCh <- taskStruct{ip: ip, ping: success}
+	resultCh <- task.Task{IP: ip, Ping: success}
 	<-guard
 }
 
-func schedule(taskCh, resultCh chan taskStruct, loadCh chan float64) {
+func schedule(taskCh, resultCh chan task.Task, loadCh chan float64) {
 	var curLoad float64
 	var maxGoroutines int
 	guard := make(chan struct{}, grandMaxGoroutines)
@@ -118,15 +109,15 @@ func schedule(taskCh, resultCh chan taskStruct, loadCh chan float64) {
 			}
 			log.Printf("[INFO] Goroutines: %v (%v)", len(guard), maxGoroutines)
 			guard <- struct{}{}
-			go pingf(task.ip, resultCh, guard)
+			go pingf(task.IP, resultCh, guard)
 		default:
 		}
 	}
 }
 
-func aggregate(resultCh chan taskStruct, statCh chan tasksStruct) {
-	var results tasksStruct = make([]taskStruct, 0, dbPublishSize)
-	var finalResults tasksStruct = make([]taskStruct, dbPublishSize, dbPublishSize)
+func aggregate(resultCh chan task.Task, statCh chan task.Tasks) {
+	var results task.Tasks = make([]task.Task, 0, dbPublishSize)
+	var finalResults task.Tasks = make([]task.Task, dbPublishSize, dbPublishSize)
 	for {
 		select {
 		case result := <-resultCh:
@@ -141,7 +132,7 @@ func aggregate(resultCh chan taskStruct, statCh chan tasksStruct) {
 	}
 }
 
-func (env *envStruct) sendStat(statCh chan tasksStruct) {
+func (env *envStruct) sendStat(statCh chan task.Tasks) {
 	for {
 		select {
 		case results := <-statCh:
@@ -168,12 +159,19 @@ func (env *envStruct) getLoad(loadCh chan float64) {
 func main() {
 	log.Println("[INFO] Worldping started")
 
-	taskCh := make(chan taskStruct)
-	resultCh := make(chan taskStruct)
-	statCh := make(chan tasksStruct)
+	taskCh := make(chan task.Task)
+	resultCh := make(chan task.Task)
+	statCh := make(chan task.Tasks)
 	loadCh := make(chan float64)
 
-	env := envStruct{dbConn: &Postgres{}}
+	env := envStruct{dbConn: &db.Postgres{
+		DBAddr:     dbAddr,
+		DBPort:     dbPort,
+		DBName:     dbName,
+		DBTable:    dbTable,
+		DBUsername: dbUsername,
+		DBPassword: dbPassword,
+	}}
 
 	env.initialize()
 

@@ -6,6 +6,10 @@ Currently only ping check available.
 
 Visualization of the results of scanning could be done on top of it. For example, using [Hiblert curve](https://en.wikipedia.org/wiki/Hilbert_curve).
 
+## Features
+
+* Concurrency controlled by Load Average on the host
+
 ## Related links
 
 * https://en.wikipedia.org/wiki/Hilbert_curve

@@ -23,7 +23,7 @@ type Postgres struct {
 
 // Open opens db connection
 func (db *Postgres) Open() (err error) {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbAddr, dbPort, dbUser, dbPassword, dbName)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbAddr, dbPort, dbUsername, dbPassword, dbName)
 	db.c, err = sql.Open("postgres", connStr)
 	return err
 }

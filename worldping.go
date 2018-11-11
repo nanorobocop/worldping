@@ -5,7 +5,10 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"time"
+
+	"github.com/shirou/gopsutil/load"
 
 	ping "github.com/digineo/go-ping"
 )
@@ -22,24 +25,17 @@ type taskGetter interface {
 }
 
 const (
-	dbAddr  = "postgres"
-	dbPort  = 5432
-	dbName  = "worldping"
-	dbUser  = "worldping"
-	dbTable = "worldping"
-
-	// dbAddr  = "127.0.0.1"
-	// dbPort  = 5432
-	// dbName  = "postgres"
-	// dbUser  = "postgres"
-	// dbTable = "worldping"
-
 	dbPublishSize = 10000
 
-	maxGoroutines = 128
+	grandMaxGoroutines = 10000
 )
 
+var dbAddr = os.Getenv("DB_ADDRESS")
+var dbPort = os.Getenv("DB_PORT")
+var dbUsername = os.Getenv("DB_USERNAME")
 var dbPassword = os.Getenv("DB_PASSWORD")
+var dbName = os.Getenv("DB_NAME")
+var dbTable = os.Getenv("DB_TABLE")
 
 type envStruct struct {
 	dbConn DB
@@ -104,13 +100,26 @@ func pingf(ip uint32, resultCh chan taskStruct, guard chan struct{}) {
 	<-guard
 }
 
-func schedule(taskCh, resultCh chan taskStruct) {
-	guard := make(chan struct{}, maxGoroutines)
+func schedule(taskCh, resultCh chan taskStruct, loadCh chan float64) {
+	var curLoad float64
+	var maxGoroutines int
+	guard := make(chan struct{}, grandMaxGoroutines)
 	for {
 		select {
+		case curLoad = <-loadCh:
+			if curLoad > 1 && maxGoroutines > 10 {
+				maxGoroutines = maxGoroutines - 1
+			} else {
+				maxGoroutines = maxGoroutines + 1
+			}
 		case task := <-taskCh:
+			for len(guard) > maxGoroutines {
+				time.Sleep(time.Millisecond)
+			}
+			log.Printf("[INFO] Goroutines: %v (%v)", len(guard), maxGoroutines)
 			guard <- struct{}{}
 			go pingf(task.ip, resultCh, guard)
+		default:
 		}
 	}
 }
@@ -143,20 +152,36 @@ func (env *envStruct) sendStat(statCh chan tasksStruct) {
 	}
 }
 
+func (env *envStruct) getLoad(loadCh chan float64) {
+	for {
+		avg, err := load.Avg()
+		if err != nil {
+			log.Printf("[ERROR] Unable to extract load average: %+v", err)
+		}
+		cores := runtime.NumCPU()
+		load := avg.Load1 / float64(cores)
+		loadCh <- load
+		time.Sleep(time.Second)
+	}
+}
+
 func main() {
 	log.Println("[INFO] Worldping started")
 
 	taskCh := make(chan taskStruct)
 	resultCh := make(chan taskStruct)
 	statCh := make(chan tasksStruct)
+	loadCh := make(chan float64)
 
 	env := envStruct{dbConn: &Postgres{}}
 
 	env.initialize()
 
+	go env.getLoad(loadCh)
+
 	go env.getTasks(taskCh)
 
-	go schedule(taskCh, resultCh)
+	go schedule(taskCh, resultCh, loadCh)
 
 	go aggregate(resultCh, statCh)
 

@@ -5,7 +5,10 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"runtime"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/nanorobocop/worldping/db"
@@ -29,7 +32,9 @@ var dbName = os.Getenv("DB_NAME")
 var dbTable = os.Getenv("DB_TABLE")
 
 type envStruct struct {
-	dbConn db.DB
+	dbConn     db.DB
+	gracefulCh chan os.Signal
+	wg         sync.WaitGroup
 }
 
 func (env *envStruct) initialize() {
@@ -91,9 +96,10 @@ func pingf(ip uint32, resultCh chan task.Task, guard chan struct{}) {
 	<-guard
 }
 
-func schedule(taskCh, resultCh chan task.Task, loadCh chan float64) {
+func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan float64) {
+
 	var curLoad float64
-	var maxGoroutines int
+	var maxGoroutines = 100
 	guard := make(chan struct{}, grandMaxGoroutines)
 	for {
 		select {
@@ -109,36 +115,38 @@ func schedule(taskCh, resultCh chan task.Task, loadCh chan float64) {
 			}
 			log.Printf("[INFO] Goroutines: %v (%v)", len(guard), maxGoroutines)
 			guard <- struct{}{}
-			go pingf(task.IP, resultCh, guard)
+			go func() {
+				env.wg.Add(1)
+				env.wg.Done()
+				pingf(task.IP, resultCh, guard)
+			}()
 		default:
 		}
 	}
 }
 
-func aggregate(resultCh chan task.Task, statCh chan task.Tasks) {
+func (env *envStruct) sendStat(resultCh chan task.Task) {
+	defer env.wg.Done()
+
 	var results task.Tasks = make([]task.Task, 0, dbPublishSize)
-	var finalResults task.Tasks = make([]task.Task, dbPublishSize, dbPublishSize)
+
 	for {
 		select {
 		case result := <-resultCh:
 			results = append(results, result)
 			if len(results) == dbPublishSize {
-				log.Printf("[INFO] Aggregate: Sending aggregated results: %v", results)
-				copy(finalResults, results)
-				statCh <- finalResults
+				if err := env.dbConn.Save(results); err != nil {
+					log.Printf("[ERROR] Problem at saving result to database: %s", err)
+				}
 				results = results[:0]
 			}
-		}
-	}
-}
-
-func (env *envStruct) sendStat(statCh chan task.Tasks) {
-	for {
-		select {
-		case results := <-statCh:
+		case <-env.gracefulCh:
+			log.Printf("[INFO] Received signal for shutdown. Storing results to DB. Results: %+v", results)
 			if err := env.dbConn.Save(results); err != nil {
 				log.Printf("[ERROR] Problem at saving result to database: %s", err)
 			}
+			log.Printf("[INFO] Data successfully stored")
+			return
 		}
 	}
 }
@@ -161,31 +169,38 @@ func main() {
 
 	taskCh := make(chan task.Task)
 	resultCh := make(chan task.Task)
-	statCh := make(chan task.Tasks)
 	loadCh := make(chan float64)
+	gracefulCh := make(chan os.Signal)
 
-	env := envStruct{dbConn: &db.Postgres{
-		DBAddr:     dbAddr,
-		DBPort:     dbPort,
-		DBName:     dbName,
-		DBTable:    dbTable,
-		DBUsername: dbUsername,
-		DBPassword: dbPassword,
-	}}
+	signal.Notify(gracefulCh, syscall.SIGTERM)
+	signal.Notify(gracefulCh, syscall.SIGINT)
+
+	env := envStruct{
+		dbConn: &db.Postgres{
+			DBAddr:     dbAddr,
+			DBPort:     dbPort,
+			DBName:     dbName,
+			DBTable:    dbTable,
+			DBUsername: dbUsername,
+			DBPassword: dbPassword,
+		},
+		gracefulCh: gracefulCh,
+	}
 
 	env.initialize()
+	env.wg.Add(1)
+
+	defer env.dbConn.Close()
 
 	go env.getLoad(loadCh)
 
 	go env.getTasks(taskCh)
 
-	go schedule(taskCh, resultCh, loadCh)
+	go env.schedule(taskCh, resultCh, loadCh)
 
-	go aggregate(resultCh, statCh)
+	go env.sendStat(resultCh)
 
-	go env.sendStat(statCh)
+	env.wg.Wait()
 
-	var forever chan int
-	forever <- 0
-
+	log.Println("[INFO] Application stopped")
 }

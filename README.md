@@ -6,9 +6,11 @@ Currently only ping check available.
 
 Visualization of the results of scanning could be done on top of it. For example, using [Hiblert curve](https://en.wikipedia.org/wiki/Hilbert_curve).
 
-## Features
+## Technical Features
 
-* Concurrency controlled by Load Average on the host
+* Dynamically evaluated concurrency level based on Load Average
+* Graceful shutdown (for saving unsubmitted results, closing connections)
+* Dependencies managed by 'go mod' (https://github.com/golang/go/wiki/Modules)
 
 ## Related links
 

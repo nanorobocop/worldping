@@ -15,6 +15,7 @@ type DB interface {
 	CreateTable() error
 	GetMaxIP() (uint32, error)
 	Save(task.Tasks) error
+	Close() error
 }
 
 // Postgres contains connection to Postgres
@@ -78,4 +79,9 @@ func (db *Postgres) Save(results task.Tasks) (err error) {
 
 	err = txn.Commit()
 	return err
+}
+
+// Close closes connection to DB
+func (db *Postgres) Close() error {
+	return db.c.Close()
 }

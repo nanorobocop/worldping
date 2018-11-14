@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	task "github.com/nanorobocop/worldping/task"
-	reflect "reflect"
 )
 
 // MockDB is a mock of DB interface
@@ -31,6 +32,18 @@ func NewMockDB(ctrl *gomock.Controller) *MockDB {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockDB) EXPECT() *MockDBMockRecorder {
 	return m.recorder
+}
+
+// Close mocks base method
+func (m *MockDB) Close() error {
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close
+func (mr *MockDBMockRecorder) Close() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDB)(nil).Close))
 }
 
 // CreateTable mocks base method

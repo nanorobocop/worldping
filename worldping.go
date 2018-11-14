@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -30,6 +31,7 @@ var dbUsername = os.Getenv("DB_USERNAME")
 var dbPassword = os.Getenv("DB_PASSWORD")
 var dbName = os.Getenv("DB_NAME")
 var dbTable = os.Getenv("DB_TABLE")
+var maxLoad, _ = strconv.ParseFloat(os.Getenv("MAX_LOAD"), 64)
 
 type envStruct struct {
 	dbConn     db.DB
@@ -104,7 +106,7 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 	for {
 		select {
 		case curLoad = <-loadCh:
-			if curLoad > 1 && maxGoroutines > 10 {
+			if curLoad > maxLoad && maxGoroutines > 10 {
 				maxGoroutines = maxGoroutines - 1
 			} else {
 				maxGoroutines = maxGoroutines + 1
@@ -166,6 +168,10 @@ func (env *envStruct) getLoad(loadCh chan float64) {
 
 func main() {
 	log.Println("[INFO] Worldping started")
+
+	if maxLoad <= 0 || maxLoad > 100 {
+		log.Fatalf("[FATAL] Wrong value maxLoad=%v (should be between 0 and 100)", maxLoad)
+	}
 
 	taskCh := make(chan task.Task)
 	resultCh := make(chan task.Task)

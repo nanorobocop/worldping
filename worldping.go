@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
 	"log"
 	"net"
@@ -35,6 +36,7 @@ var maxLoad, _ = strconv.ParseFloat(os.Getenv("MAX_LOAD"), 64)
 
 type envStruct struct {
 	dbConn     db.DB
+	ctx        context.Context
 	gracefulCh chan os.Signal
 	wg         sync.WaitGroup
 }
@@ -65,9 +67,13 @@ func (env *envStruct) getTasks(tasksCh chan task.Task) {
 
 	curIP++
 	for {
-		log.Printf("[INFO] getTasks: Sending task with ip=%d", curIP)
-		tasksCh <- task.Task{IP: curIP}
-		curIP++
+		select {
+		case tasksCh <- task.Task{IP: curIP}:
+			log.Printf("[INFO] getTasks: Sending task with ip=%d", curIP)
+			curIP++
+		case <-env.ctx.Done():
+			return
+		}
 	}
 }
 
@@ -140,7 +146,7 @@ func (env *envStruct) sendStat(resultCh chan task.Task) {
 				}
 				results = results[:0]
 			}
-		case <-env.gracefulCh:
+		case <-env.ctx.Done():
 			log.Printf("[INFO] Received signal for shutdown. Storing results to DB. Results: %+v", results)
 			if err := env.dbConn.Save(results); err != nil {
 				log.Printf("[ERROR] Problem at saving result to database: %s", err)
@@ -176,8 +182,6 @@ func main() {
 	loadCh := make(chan float64)
 	gracefulCh := make(chan os.Signal)
 
-	signal.Notify(gracefulCh, syscall.SIGTERM, syscall.SIGINT)
-
 	env := envStruct{
 		dbConn: &db.Postgres{
 			DBAddr:     dbAddr,
@@ -189,6 +193,17 @@ func main() {
 		},
 		gracefulCh: gracefulCh,
 	}
+
+	signal.Notify(gracefulCh, syscall.SIGTERM, syscall.SIGINT)
+
+	var cancel context.CancelFunc
+	env.ctx = context.Background()
+	env.ctx, cancel = context.WithCancel(env.ctx)
+
+	go func() {
+		<-gracefulCh
+		cancel()
+	}()
 
 	env.initialize()
 

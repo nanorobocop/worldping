@@ -118,8 +118,6 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 			log.Printf("[INFO] Goroutines: %v (%v)", len(guard), maxGoroutines)
 			guard <- struct{}{}
 			go func() {
-				env.wg.Add(1)
-				env.wg.Done()
 				pingf(task.IP, resultCh, guard)
 			}()
 		default:
@@ -178,8 +176,7 @@ func main() {
 	loadCh := make(chan float64)
 	gracefulCh := make(chan os.Signal)
 
-	signal.Notify(gracefulCh, syscall.SIGTERM)
-	signal.Notify(gracefulCh, syscall.SIGINT)
+	signal.Notify(gracefulCh, syscall.SIGTERM, syscall.SIGINT)
 
 	env := envStruct{
 		dbConn: &db.Postgres{
@@ -194,7 +191,6 @@ func main() {
 	}
 
 	env.initialize()
-	env.wg.Add(1)
 
 	defer env.dbConn.Close()
 
@@ -204,6 +200,7 @@ func main() {
 
 	go env.schedule(taskCh, resultCh, loadCh)
 
+	env.wg.Add(1)
 	go env.sendStat(resultCh)
 
 	env.wg.Wait()

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
+	"github.com/apsdehal/go-logger"
 	"github.com/golang/mock/gomock"
 	"github.com/nanorobocop/worldping/mocks"
 	"github.com/nanorobocop/worldping/task"
@@ -16,6 +18,7 @@ func TestInitizlize(t *testing.T) {
 
 	mockDB := mocks.NewMockDB(mockCtrl)
 	mockEnv := &envStruct{dbConn: mockDB}
+	mockEnv.log, _ = logger.New("worldping", 0, os.Stdout)
 
 	mockDB.EXPECT().Open().Return(nil).Times(1)
 	mockDB.EXPECT().Ping().Return(nil).Times(1)
@@ -26,7 +29,6 @@ func TestInitizlize(t *testing.T) {
 }
 
 func TestGetTasks(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -34,6 +36,7 @@ func TestGetTasks(t *testing.T) {
 	mockEnv := &envStruct{
 		dbConn: mockDB,
 	}
+	mockEnv.log, _ = logger.New("worldping", 0, os.Stdout)
 
 	tests := []struct {
 		ip      uint32

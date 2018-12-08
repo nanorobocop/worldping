@@ -1,7 +1,13 @@
+github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f h1:5ZfJxyXo8KyX8DgGXC5B7ILL8y51fci/qYz2B4j8iLY=
+github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
+github.com/apsdehal/go-logger v0.0.0-20180929234804-e1d9ff37593f h1:Hbc/GJzMOKWMjcWXBvSbt5zXObz60ttWLjDOB34nVC4=
+github.com/apsdehal/go-logger v0.0.0-20180929234804-e1d9ff37593f/go.mod h1:U3/8D6R9+bVpX0ORZjV+3mU9pQ86m7h1lESgJbXNvXA=
 github.com/digineo/go-logwrap v0.0.0-20181106161722-a178c58ea3f0 h1:OT/LKmj81wMymnWXaKaKBR9n1vPlu+GC0VVKaZP6kzs=
 github.com/digineo/go-logwrap v0.0.0-20181106161722-a178c58ea3f0/go.mod h1:DmqdumeAKGQNU5E8MN0ruT5ZGx8l/WbAsMbXCXcSEts=
 github.com/digineo/go-ping v0.0.0-20181106162602-34ca5077449a h1:4PTgEJXiInynGoKKbch8Scy99tziqXdTzNgfvAjrsuk=
 github.com/digineo/go-ping v0.0.0-20181106162602-34ca5077449a/go.mod h1:e0ks52x3QezaF+3yIFS0MI6zVLPtQHGtZCur3DguTjM=
+github.com/go-ole/go-ole v1.2.1 h1:2lOsA72HgjxAuMlKpFiCbHTvu44PIVkZ5hqm3RSdI/E=
+github.com/go-ole/go-ole v1.2.1/go.mod h1:7FAglXiTm7HKlQRDeOQ6ZNUHidzCWXuZWq/1dTyBNF8=
 github.com/golang/mock v1.1.1 h1:G5FRp8JnTd7RQH5kemVNlMeyXQAztQ3mOWV95KxsXH8=
 github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/lib/pq v1.0.0 h1:X5PMW56eZitiTeO7tKzZxFCSpbFZJtkMMooicw2us9A=

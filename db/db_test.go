@@ -50,6 +50,10 @@ func TestIntUint(t *testing.T) {
 }
 
 func TestIntUintIntegrational(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	tests := []uint32{
 		0,
 		1,

@@ -27,14 +27,21 @@ const (
 	grandMaxGoroutines = 10000
 )
 
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
 var dbAddr = os.Getenv("DB_ADDRESS")
 var dbPort = os.Getenv("DB_PORT")
 var dbUsername = os.Getenv("DB_USERNAME")
 var dbPassword = os.Getenv("DB_PASSWORD")
 var dbName = os.Getenv("DB_NAME")
 var dbTable = os.Getenv("DB_TABLE")
-var maxLoad, _ = strconv.ParseFloat(os.Getenv("MAX_LOAD"), 64)
-var l, _ = strconv.ParseInt(os.Getenv("LOG_LEVEL"), 0, 0) // 4 - NOTICE, 5 - DEBUG
+var maxLoad, _ = strconv.ParseFloat(getEnv("MAX_LOAD", "1"), 64)
+var l, _ = strconv.ParseInt(getEnv("LOG_LEVEL", "4"), 0, 0) // 4 - NOTICE, 5 - DEBUG
 var logLevel = int(l)
 
 type envStruct struct {

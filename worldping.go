@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -116,7 +117,7 @@ func (env *envStruct) pingf(ip uint32, resultCh chan task.Task, guard chan struc
 }
 
 func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan float64) {
-
+	ticker := time.NewTicker(10 * time.Second)
 	var curLoad float64
 	var maxGoroutines = 100
 	guard := make(chan struct{}, grandMaxGoroutines)
@@ -132,14 +133,23 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 			for len(guard) > maxGoroutines {
 				time.Sleep(time.Millisecond)
 			}
-			env.log.Noticef("Goroutines: %v (%v)", len(guard), maxGoroutines)
 			guard <- struct{}{}
 			go func() {
 				env.pingf(task.IP, resultCh, guard)
 			}()
+		case <-ticker.C:
+			env.log.Noticef("Goroutines: %v (%v)", len(guard), maxGoroutines)
 		default:
 		}
 	}
+}
+
+func ipToStr(ipInt uint32) string {
+	octet0 := ipInt >> 24
+	octet1 := ipInt << 8 >> 24
+	octet2 := ipInt << 16 >> 24
+	octet3 := ipInt << 24 >> 24
+	return fmt.Sprintf("%d.%d.%d.%d", octet0, octet1, octet2, octet3)
 }
 
 func (env *envStruct) sendStat(resultCh chan task.Task) {
@@ -147,22 +157,34 @@ func (env *envStruct) sendStat(resultCh chan task.Task) {
 
 	var results task.Tasks = make([]task.Task, 0, dbPublishSize)
 
+	sendStatFunc := func(env *envStruct, results task.Tasks) {
+		pinged := 0
+		var maxIP uint32
+		for _, r := range results {
+			if r.Ping == true {
+				pinged++
+			}
+			if r.IP > maxIP {
+				maxIP = r.IP
+			}
+		}
+		env.log.Noticef("Saving results to DB: total %d, pinged %d, maxIP %v (%d)", len(results), pinged, ipToStr(maxIP), maxIP)
+		if err := env.dbConn.Save(results); err != nil {
+			env.log.Errorf("Problem at saving result to database: %s", err)
+		}
+	}
+
 	for {
 		select {
 		case result := <-resultCh:
 			results = append(results, result)
 			if len(results) == dbPublishSize {
-				if err := env.dbConn.Save(results); err != nil {
-					env.log.Errorf("Problem at saving result to database: %s", err)
-				}
+				sendStatFunc(env, results)
 				results = results[:0]
 			}
 		case <-env.ctx.Done():
-			env.log.Noticef("Received signal for shutdown. Storing results to DB. Results: %+v", results)
-			if err := env.dbConn.Save(results); err != nil {
-				env.log.Errorf("Problem at saving result to database: %s", err)
-			}
-			env.log.Notice("Data successfully stored")
+			env.log.Noticef("Received signal for shutdown.")
+			sendStatFunc(env, results)
 			return
 		}
 	}

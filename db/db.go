@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"unsafe"
 
 	"github.com/lib/pq"
 	"github.com/nanorobocop/worldping/task"
@@ -42,10 +43,17 @@ func (db *Postgres) CreateTable() (err error) {
 	return err
 }
 
+// DropTable drops table (for tests)
+func (db *Postgres) DropTable() (err error) {
+	_, err = db.c.Query(fmt.Sprintf(`DROP TABLE %s;`, db.DBTable))
+	return err
+}
+
 // GetMaxIP return maximum IP in db
 func (db *Postgres) GetMaxIP() (maxIP uint32, err error) {
-	err = db.c.QueryRow(fmt.Sprintf("SELECT MAX(ip) from %s;", db.DBTable)).Scan(&maxIP)
-	return maxIP, err
+	var signed int32
+	err = db.c.QueryRow(fmt.Sprintf("SELECT MAX(ip) from %s;", db.DBTable)).Scan(&signed)
+	return *intToUint(signed), err
 }
 
 // Save commits information to db
@@ -57,31 +65,48 @@ func (db *Postgres) Save(results task.Tasks) (err error) {
 
 	stmt, err := txn.Prepare(pq.CopyIn(db.DBTable, "ip", "ping"))
 	if err != nil {
+		txn.Rollback()
 		return err
 	}
 
 	for _, result := range results {
-		_, err = stmt.Exec(result.IP, result.Ping)
+		_, err = stmt.Exec(uintToInt(result.IP), result.Ping)
 		if err != nil {
+			txn.Rollback()
 			return err
 		}
 	}
 
 	_, err = stmt.Exec()
 	if err != nil {
+		txn.Rollback()
 		return err
 	}
 
 	err = stmt.Close()
 	if err != nil {
+		txn.Rollback()
 		return err
 	}
 
 	err = txn.Commit()
+	if err != nil {
+		txn.Rollback()
+	}
 	return err
 }
 
 // Close closes connection to DB
 func (db *Postgres) Close() error {
 	return db.c.Close()
+}
+
+func uintToInt(u uint32) *int32 {
+	i := (*int32)(unsafe.Pointer(&u))
+	return i
+}
+
+func intToUint(u int32) *uint32 {
+	i := (*uint32)(unsafe.Pointer(&u))
+	return i
 }

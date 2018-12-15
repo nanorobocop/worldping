@@ -191,15 +191,21 @@ func (env *envStruct) sendStat(resultCh chan task.Task) {
 }
 
 func (env *envStruct) getLoad(loadCh chan float64) {
+	ctxCh := env.ctx.Done()
+	ticker := time.NewTicker(time.Second)
 	for {
-		avg, err := load.Avg()
-		if err != nil {
-			env.log.Errorf("Unable to extract load average: %+v", err)
+		select {
+		case <-ticker.C:
+			avg, err := load.Avg()
+			if err != nil {
+				env.log.Errorf("Unable to extract load average: %+v", err)
+			}
+			cores := runtime.NumCPU()
+			load := avg.Load1 / float64(cores)
+			loadCh <- load
+		case <-ctxCh:
+			return
 		}
-		cores := runtime.NumCPU()
-		load := avg.Load1 / float64(cores)
-		loadCh <- load
-		time.Sleep(time.Second)
 	}
 }
 

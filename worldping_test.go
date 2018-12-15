@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/apsdehal/go-logger"
 	"github.com/golang/mock/gomock"
@@ -109,5 +110,23 @@ func TestIPToStr(t *testing.T) {
 		if actual != test.ipStr {
 			t.Errorf("FAILED: %s", actual)
 		}
+	}
+}
+
+func TestGetLoad(t *testing.T) {
+	var cancel context.CancelFunc
+	mockEnv := &envStruct{}
+	mockEnv.ctx = context.Background()
+	mockEnv.ctx, cancel = context.WithCancel(mockEnv.ctx)
+
+	go time.AfterFunc(1000*time.Millisecond, cancel)
+
+	loadCh := make(chan float64, 1)
+	mockEnv.getLoad(loadCh)
+
+	load := <-loadCh
+
+	if load < 0 || load > 10 {
+		t.Errorf("Test FAILed, load is out of range [0; 10]: %f", load)
 	}
 }

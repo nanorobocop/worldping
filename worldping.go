@@ -184,7 +184,9 @@ func (env *envStruct) sendStat(resultCh chan task.Task) {
 			}
 		case <-env.ctx.Done():
 			env.log.Noticef("Received signal for shutdown.")
-			sendStatFunc(env, results)
+			if len(results) != 0 {
+				sendStatFunc(env, results)
+			}
 			return
 		}
 	}

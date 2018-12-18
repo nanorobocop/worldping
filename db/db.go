@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"unsafe"
 
-	"github.com/lib/pq"
+	_ "github.com/lib/pq" // driver
 	"github.com/nanorobocop/worldping/task"
 )
 
@@ -58,41 +59,17 @@ func (db *Postgres) GetMaxIP() (maxIP uint32, err error) {
 
 // Save commits information to db
 func (db *Postgres) Save(results task.Tasks) (err error) {
-	txn, err := db.c.Begin()
-	if err != nil {
-		return err
-	}
 
-	stmt, err := txn.Prepare(pq.CopyIn(db.DBTable, "ip", "ping"))
-	if err != nil {
-		txn.Rollback()
-		return err
+	valueStrings := make([]string, 0, len(results))
+	valueArgs := make([]interface{}, 0, len(results)*2)
+	for i, result := range results {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2)) // 0 -> ($1, $2), 1 -> ($3, $4), 2 -> ($5, $6)
+		valueArgs = append(valueArgs, uintToInt(result.IP))
+		valueArgs = append(valueArgs, result.Ping)
 	}
-
-	for _, result := range results {
-		_, err = stmt.Exec(uintToInt(result.IP), result.Ping)
-		if err != nil {
-			txn.Rollback()
-			return err
-		}
-	}
-
-	_, err = stmt.Exec()
-	if err != nil {
-		txn.Rollback()
-		return err
-	}
-
-	err = stmt.Close()
-	if err != nil {
-		txn.Rollback()
-		return err
-	}
-
-	err = txn.Commit()
-	if err != nil {
-		txn.Rollback()
-	}
+	// worldping=> INSERT INTO worldping  (ip, ping) VALUES (1, false),(2,false) ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping ;
+	stmt := fmt.Sprintf("INSERT INTO %s (ip, ping) VALUES %s ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping", db.DBTable, strings.Join(valueStrings, ","))
+	_, err = db.c.Exec(stmt, valueArgs...)
 	return err
 }
 

@@ -29,7 +29,7 @@ import (
 const (
 	dbPublishSize = 10000
 
-	grandMaxGoroutines = 10000
+	grandMaxGoroutines = 30000
 )
 
 func getEnv(key, fallback string) string {
@@ -58,6 +58,7 @@ type envStruct struct {
 	gracefulCh chan os.Signal
 	wg         sync.WaitGroup
 	log        *logger.Logger
+	pinger     *ping.Pinger
 }
 
 func (env *envStruct) initialize() {
@@ -75,6 +76,11 @@ func (env *envStruct) initialize() {
 	}
 	env.log.Notice("Table creation finished")
 
+	pinger, err := ping.New("0.0.0.0", "")
+	if err != nil {
+		env.log.Fatalf("Cannot initialize pinger: %v", err)
+	}
+	env.pinger = pinger
 }
 
 func (env *envStruct) getTasks(tasksCh chan task.Task) {
@@ -102,14 +108,7 @@ func (env *envStruct) pingf(ip uint32, resultCh chan task.Task, guard chan struc
 
 	env.log.Debugf("pingf: Pinging %v", ip)
 
-	p, err := ping.New("0.0.0.0", "")
-	if err != nil {
-		panic(err)
-	}
-	pinger := p
-	defer pinger.Close()
-
-	_, err = pinger.Ping(&net.IPAddr{IP: buf}, 1*time.Second)
+	_, err := env.pinger.Ping(&net.IPAddr{IP: buf}, 1*time.Second)
 	var success bool
 
 	if err == nil {
@@ -132,9 +131,9 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 		select {
 		case curLoad = <-loadCh:
 			if curLoad > maxLoad && maxGoroutines > 10 {
-				maxGoroutines = maxGoroutines - 1
+				maxGoroutines = maxGoroutines - 10
 			} else {
-				maxGoroutines = maxGoroutines + 1
+				maxGoroutines = maxGoroutines + 10
 			}
 		case task := <-taskCh:
 			for len(guard) > maxGoroutines {
@@ -277,8 +276,8 @@ func main() {
 	}()
 
 	env.initialize()
-
 	defer env.dbConn.Close()
+	defer env.pinger.Close()
 
 	go env.getLoad(loadCh)
 

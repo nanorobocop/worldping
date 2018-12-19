@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"sync"
 	"syscall"
@@ -20,6 +22,8 @@ import (
 	"github.com/shirou/gopsutil/load"
 
 	ping "github.com/digineo/go-ping"
+
+	_ "net/http/pprof"
 )
 
 const (
@@ -44,6 +48,9 @@ var dbTable = os.Getenv("DB_TABLE")
 var maxLoad, _ = strconv.ParseFloat(getEnv("MAX_LOAD", "1"), 64)
 var l, _ = strconv.ParseInt(getEnv("LOG_LEVEL", "4"), 0, 0) // 4 - NOTICE, 5 - DEBUG
 var logLevel = int(l)
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 type envStruct struct {
 	dbConn     db.DB
@@ -212,6 +219,19 @@ func (env *envStruct) getLoad(loadCh chan float64) {
 }
 
 func main() {
+
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	env := envStruct{
 		dbConn: &db.Postgres{
 			DBAddr:     dbAddr,
@@ -272,4 +292,16 @@ func main() {
 	env.wg.Wait()
 
 	env.log.Notice("Application stopped")
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+		f.Close()
+	}
 }

@@ -124,15 +124,15 @@ func (env *envStruct) pingf(ip uint32, resultCh chan task.Task, guard chan struc
 func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan float64) {
 	ticker := time.NewTicker(10 * time.Second)
 	var curLoad float64
-	var maxGoroutines = 100
+	var maxGoroutines = 1000
 	guard := make(chan struct{}, grandMaxGoroutines)
 	for {
 		select {
 		case curLoad = <-loadCh:
-			if curLoad > maxLoad && maxGoroutines > 10 {
-				maxGoroutines = maxGoroutines - 10
+			if curLoad > maxLoad && maxGoroutines > 100 {
+				maxGoroutines = maxGoroutines - 100
 			} else {
-				maxGoroutines = maxGoroutines + 10
+				maxGoroutines = maxGoroutines + 100
 			}
 		case task := <-taskCh:
 			for len(guard) > maxGoroutines {

@@ -29,7 +29,7 @@ import (
 const (
 	dbPublishSize = 10000
 
-	grandMaxGoroutines = 30000
+	grandMaxGoroutines = 1000000
 )
 
 func getEnv(key, fallback string) string {

@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	task "github.com/nanorobocop/worldping/task"
+	reflect "reflect"
 )
 
 // MockDB is a mock of DB interface
@@ -69,6 +68,19 @@ func (m *MockDB) GetMaxIP() (uint32, error) {
 // GetMaxIP indicates an expected call of GetMaxIP
 func (mr *MockDBMockRecorder) GetMaxIP() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxIP", reflect.TypeOf((*MockDB)(nil).GetMaxIP))
+}
+
+// GetOldestIP mocks base method
+func (m *MockDB) GetOldestIP() (uint32, error) {
+	ret := m.ctrl.Call(m, "GetOldestIP")
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOldestIP indicates an expected call of GetOldestIP
+func (mr *MockDBMockRecorder) GetOldestIP() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOldestIP", reflect.TypeOf((*MockDB)(nil).GetOldestIP))
 }
 
 // Open mocks base method

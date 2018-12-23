@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 	"unsafe"
 
@@ -16,6 +17,7 @@ type DB interface {
 	Ping() error
 	CreateTable() error
 	GetMaxIP() (uint32, error)
+	GetOldestIP() (uint32, error)
 	Save(task.Tasks) error
 	Close() error
 }
@@ -40,7 +42,7 @@ func (db *Postgres) Ping() error {
 
 // CreateTable creates table if not exists
 func (db *Postgres) CreateTable() (err error) {
-	_, err = db.c.Query(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (ip int PRIMARY KEY, ping bool);`, db.DBTable))
+	_, err = db.c.Query(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (ip int PRIMARY KEY, ping bool, timestamp timestamp);`, db.DBTable))
 	return err
 }
 
@@ -57,18 +59,26 @@ func (db *Postgres) GetMaxIP() (maxIP uint32, err error) {
 	return *intToUint(signed), err
 }
 
+// GetOldestIP returns oldest IP from db
+func (db *Postgres) GetOldestIP() (oldestIP uint32, err error) {
+	var signed int32
+	stmt := fmt.Sprintf("SELECT range FROM generate_series(%d, %d, %d) AS range LEFT OUTER JOIN %s on (range = ip) ORDER BY timestamp NULLS FIRST LIMIT 1;", math.MinInt32, math.MaxInt32, 1<<24, db.DBTable)
+	err = db.c.QueryRow(stmt).Scan(&signed)
+	return *intToUint(signed), err
+}
+
 // Save commits information to db
 func (db *Postgres) Save(results task.Tasks) (err error) {
 
 	valueStrings := make([]string, 0, len(results))
 	valueArgs := make([]interface{}, 0, len(results)*2)
 	for i, result := range results {
-		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2)) // 0 -> ($1, $2), 1 -> ($3, $4), 2 -> ($5, $6)
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, CURRENT_TIMESTAMP)", i*2+1, i*2+2)) // 0 -> ($1, $2), 1 -> ($3, $4), 2 -> ($5, $6)
 		valueArgs = append(valueArgs, uintToInt(result.IP))
 		valueArgs = append(valueArgs, result.Ping)
 	}
 	// worldping=> INSERT INTO worldping  (ip, ping) VALUES (1, false),(2,false) ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping ;
-	stmt := fmt.Sprintf("INSERT INTO %s (ip, ping) VALUES %s ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping", db.DBTable, strings.Join(valueStrings, ","))
+	stmt := fmt.Sprintf("INSERT INTO %s (ip, ping, timestamp) VALUES %s ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping, timestamp = CURRENT_TIMESTAMP", db.DBTable, strings.Join(valueStrings, ","))
 	_, err = db.c.Exec(stmt, valueArgs...)
 	return err
 }

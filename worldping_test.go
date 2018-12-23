@@ -13,7 +13,13 @@ import (
 	"github.com/nanorobocop/worldping/task"
 )
 
+// mockgen -destination=mocks/mock_db.go -package=mocks github.com/nanorobocop/worldping/db DB
+
 func TestInitizlize(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -47,12 +53,12 @@ func TestGetTasks(t *testing.T) {
 		{
 			ip:      111,
 			err:     nil,
-			expTask: task.Task{IP: 112},
+			expTask: task.Task{IP: 111},
 		},
 		{
 			ip:      0,
 			err:     errors.New("Some error"),
-			expTask: task.Task{IP: 1},
+			expTask: task.Task{IP: 0},
 		},
 	}
 
@@ -60,7 +66,7 @@ func TestGetTasks(t *testing.T) {
 
 		t.Logf("[TEST] %d: %+v", i, test)
 
-		mockDB.EXPECT().GetMaxIP().Return(test.ip, test.err).Times(1)
+		mockDB.EXPECT().GetOldestIP().Return(test.ip, test.err).Times(1)
 
 		var cancel context.CancelFunc
 		mockEnv.ctx = context.Background()

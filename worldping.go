@@ -75,29 +75,28 @@ func (env *envStruct) initialize() {
 		env.log.Fatalf("Table creation failed: %v", err)
 	}
 	env.log.Notice("Table creation finished")
-
-	pinger, err := ping.New("0.0.0.0", "")
-	if err != nil {
-		env.log.Fatalf("Cannot initialize pinger: %v", err)
-	}
-	env.pinger = pinger
 }
 
+// getTasks requests DB for new range of IP addresses.
+// One range is /8 subset = 2^24 = 16777216 addresses.
+// Amount of ranges = 256.
+// Each time range with oldest timestamp will be picked up.
 func (env *envStruct) getTasks(tasksCh chan task.Task) {
-	curIP, err := env.dbConn.GetMaxIP()
-	if err != nil {
-		env.log.Noticef("Could not get curIP from db: %+v", err)
-		env.log.Notice("Using 0 for curIP")
-	}
-
-	curIP++
 	for {
-		select {
-		case tasksCh <- task.Task{IP: curIP}:
-			env.log.Debugf("getTasks: Sending task with ip=%d", curIP)
-			curIP++
-		case <-env.ctx.Done():
-			return
+		startIP, err := env.dbConn.GetOldestIP()
+		if err != nil {
+			env.log.Noticef("Could not get startIP from db (db empty?): %+v", err)
+		}
+		endIP := startIP + (1 << 24)
+		env.log.Noticef("Starting with range %s:%s (%d:%d)", ipToStr(startIP), ipToStr(endIP), startIP, endIP)
+
+		for curIP := startIP; curIP < endIP; curIP++ {
+			select {
+			case tasksCh <- task.Task{IP: curIP}:
+				env.log.Debugf("getTasks: Sending task with ip=%d", curIP)
+			case <-env.ctx.Done():
+				return
+			}
 		}
 	}
 }
@@ -277,6 +276,12 @@ func main() {
 
 	env.initialize()
 	defer env.dbConn.Close()
+
+	pinger, err := ping.New("0.0.0.0", "")
+	if err != nil {
+		env.log.Fatalf("Cannot initialize pinger: %v", err)
+	}
+	env.pinger = pinger
 	defer env.pinger.Close()
 
 	go env.getLoad(loadCh)

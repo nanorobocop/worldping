@@ -87,10 +87,10 @@ func (env *envStruct) getTasks(tasksCh chan task.Task) {
 		if err != nil {
 			env.log.Noticef("Could not get startIP from db (db empty?): %+v", err)
 		}
-		endIP := startIP + (1 << 24)
+		endIP := startIP + (1 << 24) - 1
 		env.log.Noticef("Starting with range %s:%s (%d:%d)", ipToStr(startIP), ipToStr(endIP), startIP, endIP)
 
-		for curIP := startIP; curIP < endIP; curIP++ {
+		for curIP := startIP; curIP <= endIP; curIP++ {
 			select {
 			case tasksCh <- task.Task{IP: curIP}:
 				env.log.Debugf("getTasks: Sending task with ip=%d", curIP)

@@ -60,6 +60,11 @@ func TestGetTasks(t *testing.T) {
 			err:     errors.New("Some error"),
 			expTask: task.Task{IP: 0},
 		},
+		{
+			ip:      4278190080,
+			err:     nil,
+			expTask: task.Task{IP: 4278190080},
+		},
 	}
 
 	for i, test := range tests {

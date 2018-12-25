@@ -62,6 +62,7 @@ func (db *Postgres) GetMaxIP() (maxIP uint32, err error) {
 // GetOldestIP returns oldest IP from db
 func (db *Postgres) GetOldestIP() (oldestIP uint32, err error) {
 	var signed int32
+	// SELECT range FROM generate_series(-2147483648, 2147483647, 16777216) AS range LEFT OUTER JOIN worldping on (range = ip) ORDER BY timestamp NULLS FIRST LIMIT 1;
 	stmt := fmt.Sprintf("SELECT range FROM generate_series(%d, %d, %d) AS range LEFT OUTER JOIN %s on (range = ip) ORDER BY timestamp NULLS FIRST LIMIT 1;", math.MinInt32, math.MaxInt32, 1<<24, db.DBTable)
 	err = db.c.QueryRow(stmt).Scan(&signed)
 	return *intToUint(signed), err

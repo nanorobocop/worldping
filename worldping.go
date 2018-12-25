@@ -139,9 +139,7 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 				time.Sleep(time.Millisecond)
 			}
 			guard <- struct{}{}
-			go func() {
-				env.pingf(task.IP, resultCh, guard)
-			}()
+			go env.pingf(task.IP, resultCh, guard)
 		case <-ticker.C:
 			env.log.Noticef("Goroutines: %v (%v)", len(guard), maxGoroutines)
 		default:
@@ -160,9 +158,7 @@ func ipToStr(ipInt uint32) string {
 func (env *envStruct) sendStat(resultCh chan task.Task) {
 	defer env.wg.Done()
 
-	var results task.Tasks = make([]task.Task, 0, dbPublishSize)
-
-	sendStatFunc := func(env *envStruct, results task.Tasks) {
+	sendStatFunc := func(env *envStruct, results task.Tasks, guard chan struct{}) {
 		pinged := 0
 		var maxIP uint32
 		for _, r := range results {
@@ -177,20 +173,30 @@ func (env *envStruct) sendStat(resultCh chan task.Task) {
 		if err := env.dbConn.Save(results); err != nil {
 			env.log.Errorf("Problem at saving result to database: %s", err)
 		}
+		<-guard
 	}
+
+	results := make([]task.Task, dbPublishSize)
+	i := 0
+	guard := make(chan struct{}, 20)
 
 	for {
 		select {
 		case result := <-resultCh:
-			results = append(results, result)
-			if len(results) == dbPublishSize {
-				sendStatFunc(env, results)
-				results = results[:0]
+			results[i] = result
+			i++
+			if i == dbPublishSize {
+				guard <- struct{}{}
+				go sendStatFunc(env, results, guard)
+				results = make([]task.Task, dbPublishSize)
+				i = 0
+				env.log.Noticef("DB Goroutines: %d", len(guard))
 			}
 		case <-env.ctx.Done():
 			env.log.Noticef("Received signal for shutdown.")
 			if len(results) != 0 {
-				sendStatFunc(env, results)
+				guard <- struct{}{}
+				sendStatFunc(env, results[:i], guard)
 			}
 			return
 		}

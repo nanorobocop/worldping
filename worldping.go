@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	dbPublishSize = 10000
+	dbPublishSize = 1<<15 - 1
 
 	grandMaxGoroutines = 1000000
 )

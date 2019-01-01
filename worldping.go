@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -88,7 +87,7 @@ func (env *envStruct) getTasks(tasksCh chan task.Task) {
 			env.log.Noticef("Could not get startIP from db (db empty?): %+v", err)
 		}
 		endIP := startIP + (1 << 24) - 1
-		env.log.Noticef("Starting with range %s:%s (%d:%d)", ipToStr(startIP), ipToStr(endIP), startIP, endIP)
+		env.log.Noticef("Starting with range %s:%s (%d:%d)", task.IPToStr(startIP), task.IPToStr(endIP), startIP, endIP)
 
 		for curIP := startIP; curIP <= endIP; curIP++ {
 			select {
@@ -147,14 +146,6 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 	}
 }
 
-func ipToStr(ipInt uint32) string {
-	octet0 := ipInt >> 24
-	octet1 := ipInt << 8 >> 24
-	octet2 := ipInt << 16 >> 24
-	octet3 := ipInt << 24 >> 24
-	return fmt.Sprintf("%d.%d.%d.%d", octet0, octet1, octet2, octet3)
-}
-
 func (env *envStruct) sendStat(resultCh chan task.Task) {
 	defer env.wg.Done()
 
@@ -169,7 +160,7 @@ func (env *envStruct) sendStat(resultCh chan task.Task) {
 				maxIP = r.IP
 			}
 		}
-		env.log.Noticef("Saving results to DB: total %d, pinged %d, maxIP %v (%d)", len(results), pinged, ipToStr(maxIP), maxIP)
+		env.log.Noticef("Saving results to DB: total %d, pinged %d, maxIP %v (%d)", len(results), pinged, task.IPToStr(maxIP), maxIP)
 		if err := env.dbConn.Save(results); err != nil {
 			env.log.Errorf("Problem at saving result to database: %s", err)
 		}

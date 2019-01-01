@@ -37,12 +37,12 @@ func TestIntUint(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		signed := uintToInt(test.unsigned)
+		signed := UintToInt(test.unsigned)
 		if *signed != test.signed {
 			t.Errorf("Test %d FAILED: %d (actual) != %d (expected)", i, *signed, test.signed)
 		}
 
-		unsigned := intToUint(test.signed)
+		unsigned := IntToUint(test.signed)
 		if *unsigned != test.unsigned {
 			t.Errorf("Test %d FAILED: %d (actual) != %d (expected)", i, *unsigned, test.unsigned)
 		}

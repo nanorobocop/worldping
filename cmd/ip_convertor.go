@@ -39,9 +39,13 @@ func parseInt(intStr *string) (uintVar *uint32, intVar *int32, cidrVar string, e
 	return
 }
 
-func parseCidr(cidrStr string) (uintVar *uint32, intVar *int32, cidrVar string, err error) {
-	r := regexp.MustCompile(`^(?P\d{1,3})\.(?P\d{1,3})\.(?P\d{1,3})\.(?P\d{1,3})$`)
-	matched := r.FindStringSubmatch(cidrStr)
+func parseCidr(cidrStr *string) (uintVar *uint32, intVar *int32, cidrVar string, err error) {
+	r := regexp.MustCompile(`^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$`)
+	matched := r.FindStringSubmatch(*cidrStr)
+
+	if len(matched) != 5 {
+		return nil, nil, "", errors.New("Numbers of octets mismatch")
+	}
 
 	octet24, err := strconv.ParseUint(matched[1], 10, 32)
 	if err != nil {
@@ -51,7 +55,7 @@ func parseCidr(cidrStr string) (uintVar *uint32, intVar *int32, cidrVar string, 
 		return nil, nil, "", errors.New("First octet should be less 256")
 	}
 
-	octet16, err := strconv.ParseUint(matched[1], 10, 32)
+	octet16, err := strconv.ParseUint(matched[2], 10, 32)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -59,7 +63,7 @@ func parseCidr(cidrStr string) (uintVar *uint32, intVar *int32, cidrVar string, 
 		return nil, nil, "", errors.New("Second octet should be less 256")
 	}
 
-	octet8, err := strconv.ParseUint(matched[1], 10, 32)
+	octet8, err := strconv.ParseUint(matched[3], 10, 32)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -67,7 +71,7 @@ func parseCidr(cidrStr string) (uintVar *uint32, intVar *int32, cidrVar string, 
 		return nil, nil, "", errors.New("Third octet should be less 256")
 	}
 
-	octet0, err := strconv.ParseUint(matched[1], 10, 32)
+	octet0, err := strconv.ParseUint(matched[4], 10, 32)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -77,6 +81,7 @@ func parseCidr(cidrStr string) (uintVar *uint32, intVar *int32, cidrVar string, 
 	uintTmp := uint32(octet24<<24 + octet16<<16 + octet8<<8 + octet0)
 	uintVar = &uintTmp
 	intVar = db.UintToInt(*uintVar)
+	cidrVar = task.IPToStr(*uintVar)
 	return
 }
 
@@ -96,7 +101,7 @@ func main() {
 	} else if *intStr != "" {
 		uintVar, intVar, cidrVar, err = parseInt(intStr)
 	} else if *cidrStr != "" {
-		uintVar, intVar, cidrVar, err = parseInt(cidrStr)
+		uintVar, intVar, cidrVar, err = parseCidr(cidrStr)
 	} else {
 		fmt.Printf("Usage: %v [-int|-uint|-str] VALUE\n", os.Args[0])
 		os.Exit(1)

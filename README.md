@@ -18,11 +18,15 @@ Performance during scan - is a main feature of this project.
 Current version scans 10000 hosts in 1 sec and spinning up thousands goroutines:
 
 ```bash
-2018-12-12 05:30:16 NOTICE Saving results to DB: total 10000, pinged 0, maxIP 153.123.73.163 (2574993827)
-2018-12-12 05:30:17 NOTICE Saving results to DB: total 10000, pinged 0, maxIP 153.123.112.180 (2575003828)
-2018-12-12 05:30:18 NOTICE Goroutines: 8786 (70754)
-2018-12-12 05:30:19 NOTICE Saving results to DB: total 10000, pinged 0, maxIP 153.123.151.195 (2575013827)
-2018-12-12 05:30:20 NOTICE Saving results to DB: total 10000, pinged 0, maxIP 153.123.190.211 (2575023827)
+2019-01-02 13:17:31 NOTICE Saving results to DB: total 32767, pinged 0, maxIP 243.225.18.153 (4091613849)
+2019-01-02 13:17:32 NOTICE Goroutines: 375785 (12348300)
+2019-01-02 13:17:34 NOTICE DB Goroutines: 1
+2019-01-02 13:17:34 NOTICE Saving results to DB: total 32767, pinged 0, maxIP 243.225.156.113 (4091649137)
+2019-01-02 13:17:46 NOTICE Goroutines: 371429 (12348600)
+2019-01-02 13:17:48 NOTICE DB Goroutines: 1
+2019-01-02 13:17:48 NOTICE Saving results to DB: total 32767, pinged 0, maxIP 243.225.233.215 (4091668951)
+2019-01-02 13:17:51 NOTICE DB Goroutines: 1
+2019-01-02 13:17:51 NOTICE Saving results to DB: total 32767, pinged 0, maxIP 243.226.72.93 (4091693149)
 ```
 
 ## Related links

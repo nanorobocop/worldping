@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -108,4 +109,50 @@ func TestGetLoad(t *testing.T) {
 	if load < 0 || load > 10 {
 		t.Errorf("Test FAILed, load is out of range [0; 10]: %f", load)
 	}
+}
+
+type mockPinger struct {
+	mockErr error
+}
+
+func (p mockPinger) Ping(*net.IPAddr, time.Duration) (time.Duration, error) {
+	return time.Second, p.mockErr
+}
+
+func (p mockPinger) Close() {}
+
+func TestPingf(t *testing.T) {
+	guard := make(chan struct{}, 1)
+	resultCh := make(chan task.Task, 1)
+
+	steps := []struct {
+		ip      uint32
+		ping    bool
+		fakeErr error
+	}{
+		{
+			ip:      uint32(0),
+			ping:    false,
+			fakeErr: errors.New("some error"),
+		},
+		{
+			ip:      uint32(1),
+			ping:    true,
+			fakeErr: nil,
+		},
+	}
+
+	for i, step := range steps {
+		guard <- struct{}{}
+		mockEnv := &envStruct{pinger: mockPinger{mockErr: step.fakeErr}}
+		mockEnv.log, _ = logger.New("worldping", 0, os.Stdout)
+
+		t.Logf("Step %d: %+v", i, step)
+		mockEnv.pingf(step.ip, resultCh, guard)
+		actualResult := <-resultCh
+		if actualResult.Ping != step.ping {
+			t.Errorf("TEST FAILED: expected %v, actual %v", step.ping, actualResult)
+		}
+	}
+
 }

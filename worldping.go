@@ -25,6 +25,22 @@ import (
 	_ "net/http/pprof"
 )
 
+// Pinger interface
+type Pinger interface {
+	Ping(*net.IPAddr, time.Duration) (time.Duration, error)
+	Close()
+}
+
+type pinger struct{}
+
+func (p *pinger) Ping(destination *net.IPAddr, timeout time.Duration) (time.Duration, error) {
+	return p.Ping(destination, timeout)
+}
+
+func (p *pinger) Close() {
+	p.Close()
+}
+
 const (
 	dbPublishSize = 1<<15 - 1
 
@@ -57,7 +73,7 @@ type envStruct struct {
 	gracefulCh chan os.Signal
 	wg         sync.WaitGroup
 	log        *logger.Logger
-	pinger     *ping.Pinger
+	pinger     Pinger
 }
 
 func (env *envStruct) initialize() {

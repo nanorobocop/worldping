@@ -156,3 +156,23 @@ func TestPingf(t *testing.T) {
 	}
 
 }
+
+func TestSchedule(t *testing.T) {
+	taskCh := make(chan task.Task, 1)
+	resultCh := make(chan task.Task)
+	loadCh := make(chan float64, 1)
+
+	mockEnv := &envStruct{pinger: mockPinger{mockErr: nil}}
+	mockEnv.log, _ = logger.New("worldping", 0, os.Stdout)
+	mockEnv.ctx = context.Background()
+	var cancel context.CancelFunc
+	mockEnv.ctx, cancel = context.WithCancel(mockEnv.ctx)
+
+	go mockEnv.schedule(taskCh, resultCh, loadCh)
+
+	loadCh <- 1
+	loadCh <- 1001
+	taskCh <- task.Task{IP: uint32(0)}
+
+	cancel()
+}

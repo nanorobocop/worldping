@@ -157,7 +157,8 @@ func (env *envStruct) schedule(taskCh, resultCh chan task.Task, loadCh chan floa
 			go env.pingf(task.IP, resultCh, guard)
 		case <-ticker.C:
 			env.log.Noticef("Goroutines: %v (%v)", len(guard), maxGoroutines)
-		default:
+		case <-env.ctx.Done():
+			return
 		}
 	}
 }

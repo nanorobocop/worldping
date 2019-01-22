@@ -176,3 +176,23 @@ func TestSchedule(t *testing.T) {
 
 	cancel()
 }
+
+func TestSendStat(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockDB := mocks.NewMockDB(mockCtrl)
+	// mockDB.EXPECT().Save(task.Task{}).Return(nil).Times(1)
+
+	resultCh := make(chan task.Task)
+
+	mockEnv := &envStruct{dbConn: mockDB}
+	mockEnv.log, _ = logger.New("worldping", 0, os.Stdout)
+	mockEnv.ctx = context.Background()
+	var cancel context.CancelFunc
+	mockEnv.ctx, cancel = context.WithCancel(mockEnv.ctx)
+	mockEnv.wg.Add(1)
+
+	go mockEnv.sendStat(resultCh)
+
+	cancel()
+}

@@ -6,48 +6,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/nanorobocop/worldping/task"
+	"github.com/nanorobocop/worldping/worldping"
 )
-
-func TestIntUint(t *testing.T) {
-	tests := []struct {
-		unsigned uint32
-		signed   int32
-	}{
-		{
-			unsigned: 0,
-			signed:   0,
-		},
-		{
-			unsigned: 1,
-			signed:   1,
-		},
-		{
-			unsigned: 1<<31 - 1,
-			signed:   1<<31 - 1,
-		},
-		{
-			unsigned: 1 << 31,
-			signed:   -1 << 31,
-		},
-		{
-			unsigned: 1<<32 - 1,
-			signed:   -1,
-		},
-	}
-
-	for i, test := range tests {
-		signed := UintToInt(test.unsigned)
-		if *signed != test.signed {
-			t.Errorf("Test %d FAILED: %d (actual) != %d (expected)", i, *signed, test.signed)
-		}
-
-		unsigned := IntToUint(test.signed)
-		if *unsigned != test.unsigned {
-			t.Errorf("Test %d FAILED: %d (actual) != %d (expected)", i, *unsigned, test.unsigned)
-		}
-	}
-}
 
 func TestIntUintIntegrational(t *testing.T) {
 	if testing.Short() {
@@ -69,12 +29,22 @@ func TestIntUintIntegrational(t *testing.T) {
 			DBName:     "postgres",
 			DBTable:    fmt.Sprintf("testdb_%d", rand.Intn(math.MaxInt32)),
 			DBUsername: "postgres",
-			DBPassword: "postgres",
+			DBPassword: "123456",
 		}
-		db.Open()
-		db.Ping()
-		db.CreateTable()
-		results := task.Tasks{{IP: test}}
+
+		if err := db.Open(); err != nil {
+			t.Fatalf("Cannot open DB: %+v", err)
+		}
+
+		if err := db.Ping(); err != nil {
+			t.Fatalf("Cannot ping DB: %+v", err)
+		}
+
+		if err := db.CreateTable(); err != nil {
+			t.Fatalf("Cannot create table: %+v", err)
+		}
+
+		results := worldping.Tasks{{IP: test}}
 		db.Save(results)
 		actual, _ := db.GetMaxIP()
 		if actual != test {
@@ -90,17 +60,17 @@ func TestGetOldestIntegrational(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	resultsExceptLast := make([]task.Task, 255)
+	resultsExceptLast := make([]worldping.Task, 255)
 	for i := range resultsExceptLast {
-		resultsExceptLast[i] = task.Task{IP: uint32(i * 1 << 24)}
+		resultsExceptLast[i] = worldping.Task{IP: uint32(i * 1 << 24)}
 	}
 
 	steps := []struct {
-		results  []task.Tasks
+		results  []worldping.Tasks
 		expected uint32
 	}{
 		{
-			results: []task.Tasks{
+			results: []worldping.Tasks{
 				resultsExceptLast,
 			},
 			expected: uint32(1<<32 - 1<<24),
@@ -114,7 +84,7 @@ func TestGetOldestIntegrational(t *testing.T) {
 			DBName:     "postgres",
 			DBTable:    fmt.Sprintf("testdb_%d", rand.Intn(math.MaxInt16)),
 			DBUsername: "postgres",
-			DBPassword: "postgres",
+			DBPassword: "123456",
 		}
 		db.Open()
 		db.Ping()

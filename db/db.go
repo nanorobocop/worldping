@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"unsafe"
+
+	"github.com/nanorobocop/worldping/worldping"
 
 	_ "github.com/lib/pq" // driver
-	"github.com/nanorobocop/worldping/task"
 )
 
 // DB implements interface for database (Postgres initially)
@@ -18,7 +18,7 @@ type DB interface {
 	CreateTable() error
 	GetMaxIP() (uint32, error)
 	GetOldestIP() (uint32, error)
-	Save(task.Tasks) error
+	Save(worldping.Tasks) error
 	Close() error
 }
 
@@ -56,7 +56,7 @@ func (db *Postgres) DropTable() (err error) {
 func (db *Postgres) GetMaxIP() (maxIP uint32, err error) {
 	var signed int32
 	err = db.c.QueryRow(fmt.Sprintf("SELECT MAX(ip) from %s;", db.DBTable)).Scan(&signed)
-	return *IntToUint(signed), err
+	return *worldping.IntToUint(signed), err
 }
 
 // GetOldestIP returns oldest IP from db
@@ -65,17 +65,17 @@ func (db *Postgres) GetOldestIP() (oldestIP uint32, err error) {
 	// SELECT range FROM generate_series(-2147483648, 2147483647, 16777216) AS range LEFT OUTER JOIN worldping on (range = ip) ORDER BY timestamp NULLS FIRST LIMIT 1;
 	stmt := fmt.Sprintf("SELECT range FROM generate_series(%d, %d, %d) AS range LEFT OUTER JOIN %s on (range = ip) ORDER BY timestamp NULLS FIRST LIMIT 1;", math.MinInt32, math.MaxInt32, 1<<24, db.DBTable)
 	err = db.c.QueryRow(stmt).Scan(&signed)
-	return *IntToUint(signed), err
+	return *worldping.IntToUint(signed), err
 }
 
 // Save commits information to db
-func (db *Postgres) Save(results task.Tasks) (err error) {
+func (db *Postgres) Save(results worldping.Tasks) (err error) {
 
 	valueStrings := make([]string, 0, len(results))
 	valueArgs := make([]interface{}, 0, len(results)*2)
 	for i, result := range results {
 		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, CURRENT_TIMESTAMP)", i*2+1, i*2+2)) // 0 -> ($1, $2), 1 -> ($3, $4), 2 -> ($5, $6)
-		valueArgs = append(valueArgs, UintToInt(result.IP))
+		valueArgs = append(valueArgs, worldping.UintToInt(result.IP))
 		valueArgs = append(valueArgs, result.Ping)
 	}
 	// worldping=> INSERT INTO worldping  (ip, ping) VALUES (1, false),(2,false) ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping ;
@@ -87,16 +87,4 @@ func (db *Postgres) Save(results task.Tasks) (err error) {
 // Close closes connection to DB
 func (db *Postgres) Close() error {
 	return db.c.Close()
-}
-
-// UintToInt converts uint to int IP representation
-func UintToInt(u uint32) *int32 {
-	i := (*int32)(unsafe.Pointer(&u))
-	return i
-}
-
-// IntToUint converts int to uint IP representation
-func IntToUint(u int32) *uint32 {
-	i := (*uint32)(unsafe.Pointer(&u))
-	return i
 }

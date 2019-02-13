@@ -1,0 +1,19 @@
+---
+version: '2.1'
+services:
+
+  postgres:
+    build: postgres
+    restart: always
+    user: 0:0
+    ports:
+      - 5432:5432
+    volumes:
+      - worldping_postgres:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_DB=postgres
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=123456
+
+volumes:
+  worldping_postgres:

@@ -1,0 +1,31 @@
+---
+version: '2.1'
+services:
+
+  worldping:
+    build: .
+    restart: always
+    ports:
+      - "12345:12345"
+    environment:
+      - PORT=12345
+      - DB_ADDRESS=postgres
+      - DB_PORT=5432
+      - DB_PASSWORD=123456
+      - DB_USERNAME=postgres
+      - DB_NAME=postgres
+      - DB_TABLE=worldping
+      - MAX_LOAD=1
+      - LOG_LEVEL=4
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    build: postgres
+    restart: always
+    user: 0:0
+    environment:
+    - POSTGRES_DB=postgres
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=123456

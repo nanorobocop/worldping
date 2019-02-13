@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/nanorobocop/worldping/task"
+	"github.com/nanorobocop/worldping/worldping"
 )
 
 func TestDBInsert(t *testing.T) {
@@ -22,13 +22,13 @@ func TestDBInsert(t *testing.T) {
 		DBName:     "postgres",
 		DBTable:    "testdb_hugeinsert",
 		DBUsername: "postgres",
-		DBPassword: "postgres",
+		DBPassword: "123456",
 	}
 
 	t.Logf("Preparing results")
-	results := make([]task.Task, 1<<15-1)
+	results := make([]worldping.Task, 1<<15-1)
 	for i := range results {
-		results[i] = task.Task{IP: uint32(i)}
+		results[i] = worldping.Task{IP: uint32(i)}
 	}
 
 	db.Open()
@@ -40,7 +40,7 @@ func TestDBInsert(t *testing.T) {
 	valueArgs := make([]interface{}, 0, len(results)*2)
 	for i, result := range results {
 		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, CURRENT_TIMESTAMP)", i*2+1, i*2+2)) // 0 -> ($1, $2), 1 -> ($3, $4), 2 -> ($5, $6)
-		valueArgs = append(valueArgs, UintToInt(result.IP))
+		valueArgs = append(valueArgs, worldping.UintToInt(result.IP))
 		valueArgs = append(valueArgs, result.Ping)
 	}
 	// worldping=> INSERT INTO worldping  (ip, ping) VALUES (1, false),(2,false) ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping ;
@@ -71,13 +71,13 @@ func TestDBBulkInsert(t *testing.T) {
 		DBName:     "postgres",
 		DBTable:    "testdb_bulkinsert",
 		DBUsername: "postgres",
-		DBPassword: "postgres",
+		DBPassword: "123456",
 	}
 
 	t.Logf("Preparing results")
-	results := make([]task.Task, 1<<24)
+	results := make([]worldping.Task, 1<<24)
 	for i := range results {
-		results[i] = task.Task{IP: uint32(i)}
+		results[i] = worldping.Task{IP: uint32(i)}
 	}
 
 	db.Open()

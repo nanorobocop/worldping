@@ -11,7 +11,7 @@ import (
 	"github.com/apsdehal/go-logger"
 	"github.com/golang/mock/gomock"
 	"github.com/nanorobocop/worldping/mocks"
-	"github.com/nanorobocop/worldping/task"
+	"github.com/nanorobocop/worldping/worldping"
 )
 
 // mockgen -destination=mocks/mock_db.go -package=mocks github.com/nanorobocop/worldping/db DB
@@ -49,22 +49,22 @@ func TestGetTasks(t *testing.T) {
 	tests := []struct {
 		ip      uint32
 		err     error
-		expTask task.Task
+		expTask worldping.Task
 	}{
 		{
 			ip:      111,
 			err:     nil,
-			expTask: task.Task{IP: 111},
+			expTask: worldping.Task{IP: 111},
 		},
 		{
 			ip:      0,
 			err:     errors.New("Some error"),
-			expTask: task.Task{IP: 0},
+			expTask: worldping.Task{IP: 0},
 		},
 		{
 			ip:      4278190080,
 			err:     nil,
-			expTask: task.Task{IP: 4278190080},
+			expTask: worldping.Task{IP: 4278190080},
 		},
 	}
 
@@ -78,7 +78,7 @@ func TestGetTasks(t *testing.T) {
 		mockEnv.ctx = context.Background()
 		mockEnv.ctx, cancel = context.WithCancel(mockEnv.ctx)
 
-		tasksCh := make(chan task.Task, 1)
+		tasksCh := make(chan worldping.Task, 1)
 
 		go mockEnv.getTasks(tasksCh)
 
@@ -123,7 +123,7 @@ func (p mockPinger) Close() {}
 
 func TestPingf(t *testing.T) {
 	guard := make(chan struct{}, 1)
-	resultCh := make(chan task.Task, 1)
+	resultCh := make(chan worldping.Task, 1)
 
 	steps := []struct {
 		ip      uint32
@@ -158,8 +158,8 @@ func TestPingf(t *testing.T) {
 }
 
 func TestSchedule(t *testing.T) {
-	taskCh := make(chan task.Task, 1)
-	resultCh := make(chan task.Task)
+	taskCh := make(chan worldping.Task, 1)
+	resultCh := make(chan worldping.Task)
 	loadCh := make(chan float64, 1)
 
 	mockEnv := &envStruct{pinger: mockPinger{mockErr: nil}}
@@ -172,7 +172,7 @@ func TestSchedule(t *testing.T) {
 
 	loadCh <- 1
 	loadCh <- 1001
-	taskCh <- task.Task{IP: uint32(0)}
+	taskCh <- worldping.Task{IP: uint32(0)}
 
 	cancel()
 }
@@ -181,9 +181,9 @@ func TestSendStat(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockDB := mocks.NewMockDB(mockCtrl)
-	// mockDB.EXPECT().Save(task.Task{}).Return(nil).Times(1)
+	// mockDB.EXPECT().Save(worldping.Task{}).Return(nil).Times(1)
 
-	resultCh := make(chan task.Task)
+	resultCh := make(chan worldping.Task)
 
 	mockEnv := &envStruct{dbConn: mockDB}
 	mockEnv.log, _ = logger.New("worldping", 0, os.Stdout)

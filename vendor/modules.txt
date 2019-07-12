@@ -9,7 +9,7 @@ github.com/digineo/go-ping
 # github.com/go-ole/go-ole v1.2.1
 github.com/go-ole/go-ole
 github.com/go-ole/go-ole/oleutil
-# github.com/golang/mock v1.1.1
+# github.com/golang/mock v1.2.0
 github.com/golang/mock/gomock
 # github.com/lib/pq v1.0.0
 github.com/lib/pq
@@ -21,7 +21,6 @@ github.com/shirou/gopsutil/internal/common
 golang.org/x/net/icmp
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-golang.org/x/net/context
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/bpf

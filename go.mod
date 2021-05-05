@@ -1,5 +1,7 @@
 module github.com/nanorobocop/worldping
 
+go 1.16
+
 require (
 	github.com/StackExchange/wmi v0.0.0-20180725035823-b12b22c5341f // indirect
 	github.com/apsdehal/go-logger v0.0.0-20180929234804-e1d9ff37593f

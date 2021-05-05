@@ -1,4 +1,4 @@
-FROM golang:1.12.7-alpine3.10
+FROM golang:1.16.3-alpine3.13
 WORKDIR /usr/src/app
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o bin/worldping

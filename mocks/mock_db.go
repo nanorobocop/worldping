@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	worldping "github.com/nanorobocop/worldping/worldping"
-	reflect "reflect"
 )
 
-// MockDB is a mock of DB interface
+// MockDB is a mock of DB interface.
 type MockDB struct {
 	ctrl     *gomock.Controller
 	recorder *MockDBMockRecorder
 }
 
-// MockDBMockRecorder is the mock recorder for MockDB
+// MockDBMockRecorder is the mock recorder for MockDB.
 type MockDBMockRecorder struct {
 	mock *MockDB
 }
 
-// NewMockDB creates a new mock instance
+// NewMockDB creates a new mock instance.
 func NewMockDB(ctrl *gomock.Controller) *MockDB {
 	mock := &MockDB{ctrl: ctrl}
 	mock.recorder = &MockDBMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDB) EXPECT() *MockDBMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method
+// Close mocks base method.
 func (m *MockDB) Close() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close")
@@ -41,13 +42,13 @@ func (m *MockDB) Close() error {
 	return ret0
 }
 
-// Close indicates an expected call of Close
+// Close indicates an expected call of Close.
 func (mr *MockDBMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDB)(nil).Close))
 }
 
-// CreateTable mocks base method
+// CreateTable mocks base method.
 func (m *MockDB) CreateTable() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateTable")
@@ -55,13 +56,13 @@ func (m *MockDB) CreateTable() error {
 	return ret0
 }
 
-// CreateTable indicates an expected call of CreateTable
+// CreateTable indicates an expected call of CreateTable.
 func (mr *MockDBMockRecorder) CreateTable() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTable", reflect.TypeOf((*MockDB)(nil).CreateTable))
 }
 
-// GetMaxIP mocks base method
+// GetMaxIP mocks base method.
 func (m *MockDB) GetMaxIP() (uint32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMaxIP")
@@ -70,13 +71,13 @@ func (m *MockDB) GetMaxIP() (uint32, error) {
 	return ret0, ret1
 }
 
-// GetMaxIP indicates an expected call of GetMaxIP
+// GetMaxIP indicates an expected call of GetMaxIP.
 func (mr *MockDBMockRecorder) GetMaxIP() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxIP", reflect.TypeOf((*MockDB)(nil).GetMaxIP))
 }
 
-// GetOldestIP mocks base method
+// GetOldestIP mocks base method.
 func (m *MockDB) GetOldestIP() (uint32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOldestIP")
@@ -85,13 +86,13 @@ func (m *MockDB) GetOldestIP() (uint32, error) {
 	return ret0, ret1
 }
 
-// GetOldestIP indicates an expected call of GetOldestIP
+// GetOldestIP indicates an expected call of GetOldestIP.
 func (mr *MockDBMockRecorder) GetOldestIP() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOldestIP", reflect.TypeOf((*MockDB)(nil).GetOldestIP))
 }
 
-// Open mocks base method
+// Open mocks base method.
 func (m *MockDB) Open() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Open")
@@ -99,13 +100,13 @@ func (m *MockDB) Open() error {
 	return ret0
 }
 
-// Open indicates an expected call of Open
+// Open indicates an expected call of Open.
 func (mr *MockDBMockRecorder) Open() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*MockDB)(nil).Open))
 }
 
-// Ping mocks base method
+// Ping mocks base method.
 func (m *MockDB) Ping() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Ping")
@@ -113,13 +114,13 @@ func (m *MockDB) Ping() error {
 	return ret0
 }
 
-// Ping indicates an expected call of Ping
+// Ping indicates an expected call of Ping.
 func (mr *MockDBMockRecorder) Ping() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockDB)(nil).Ping))
 }
 
-// Save mocks base method
+// Save mocks base method.
 func (m *MockDB) Save(arg0 worldping.Tasks) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", arg0)
@@ -127,7 +128,7 @@ func (m *MockDB) Save(arg0 worldping.Tasks) error {
 	return ret0
 }
 
-// Save indicates an expected call of Save
+// Save indicates an expected call of Save.
 func (mr *MockDBMockRecorder) Save(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockDB)(nil).Save), arg0)

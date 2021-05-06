@@ -42,7 +42,11 @@ func main () {
 	// Critically log critical
 	log.Critical("This is Critical!")
 	log.CriticalF("%+v", err)
+	// You can also use fmt compliant naming scheme such as log.Criticalf, log.Panicf etc
+	// with small 'f'
+	
 	// Debug
+	// Since default logging level is Info this won't print anything
 	log.Debug("This is Debug!")
 	log.DebugF("Here are some numbers: %d %d %f", 10, -3, 3.14)
 	// Give the Warning
@@ -67,11 +71,20 @@ func main () {
 	logger.SetDefaultFormat("%{message}")
 	log2, _ := logger.New("pkg", 1, os.Stdout)
 	log2.Error("This is Error!") // output: "This is Error!"
+
+	// Use log levels to set your log priority
+	log2.SetLogLevel(DebugLevel)
+	// This will be printed
+	log2.Debug("This is debug!")
+	log2.SetLogLevel(WarningLevel)
+	// This won't be printed
+	log2.Info("This is an error!")
 }
 ```
 
 
 # Formatting
+
 By default all log messages have format that you can see above (on pic).
 But you can override the default format and set format that you want.
 
@@ -112,7 +125,7 @@ Invalid verbs (like ```%{inv-verb```) will be treated as plain text.
 
 # Tests
 
-Run: 
+Run:
 - `go test logger` to run test on logger.
 - `go test -bench=.` for benchmarks.
 
@@ -126,8 +139,8 @@ Following contributors have made major contributions to go-logger:
 
 - [@qioalice](https://github.com/qioalice)
 - [@gjvnq](https://github.com/gjvnq)
+- [@maezen](https://github.com/maezen)
 
 ## License
 
 The [BSD 3-Clause license](http://opensource.org/licenses/BSD-3-Clause), the same as the [Go language](http://golang.org/LICENSE).
-

@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/apsdehal/go-logger v0.0.0-20190515212710-b0d6ccfee0e6
-	github.com/digineo/go-logwrap v0.0.0-20181106161722-a178c58ea3f0 // indirect
 	github.com/digineo/go-ping v1.0.1
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/golang/mock v1.5.0

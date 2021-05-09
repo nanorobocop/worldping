@@ -1,18 +1,9 @@
-package worldping
+package utils
 
 import (
 	"fmt"
 	"unsafe"
 )
-
-// Task contains info about a task
-type Task struct {
-	IP   uint32
-	Ping bool
-}
-
-// Tasks is an array of tasks
-type Tasks []Task
 
 // IPToStr converts
 func IPToStr(ipInt uint32) string {

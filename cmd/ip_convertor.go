@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/nanorobocop/worldping/worldping"
+	"github.com/nanorobocop/worldping/pkg/utils"
 )
 
 func parseUint(uintStr *string) (uintVar *uint32, intVar *int32, cidrVar string, err error) {
@@ -19,8 +19,8 @@ func parseUint(uintStr *string) (uintVar *uint32, intVar *int32, cidrVar string,
 	uintTmp := uint32(uintVar64)
 	uintVar = &uintTmp
 
-	intVar = worldping.UintToInt(*uintVar)
-	cidrVar = worldping.IPToStr(*uintVar)
+	intVar = utils.UintToInt(*uintVar)
+	cidrVar = utils.IPToStr(*uintVar)
 	return
 }
 
@@ -32,8 +32,8 @@ func parseInt(intStr *string) (uintVar *uint32, intVar *int32, cidrVar string, e
 	intTmp := int32(intVar64)
 	intVar = &intTmp
 
-	uintVar = worldping.IntToUint(*intVar)
-	cidrVar = worldping.IPToStr(*uintVar)
+	uintVar = utils.IntToUint(*intVar)
+	cidrVar = utils.IPToStr(*uintVar)
 	return
 }
 
@@ -78,8 +78,8 @@ func parseCidr(cidrStr *string) (uintVar *uint32, intVar *int32, cidrVar string,
 	}
 	uintTmp := uint32(octet24<<24 + octet16<<16 + octet8<<8 + octet0)
 	uintVar = &uintTmp
-	intVar = worldping.UintToInt(*uintVar)
-	cidrVar = worldping.IPToStr(*uintVar)
+	intVar = utils.UintToInt(*uintVar)
+	cidrVar = utils.IPToStr(*uintVar)
 	return
 }
 

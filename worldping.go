@@ -17,7 +17,8 @@ import (
 
 	"github.com/apsdehal/go-logger"
 	"github.com/nanorobocop/worldping/db"
-	"github.com/nanorobocop/worldping/worldping"
+	"github.com/nanorobocop/worldping/pkg/types"
+	"github.com/nanorobocop/worldping/pkg/utils"
 	"github.com/shirou/gopsutil/load"
 
 	ping "github.com/digineo/go-ping"
@@ -96,18 +97,18 @@ func (env *envStruct) initialize() {
 // One range is /8 subset = 2^24 = 16777216 addresses.
 // Amount of ranges = 256.
 // Each time range with oldest timestamp will be picked up.
-func (env *envStruct) getTasks(tasksCh chan worldping.Task) {
+func (env *envStruct) getTasks(tasksCh chan types.Task) {
 	for {
 		startIP, err := env.dbConn.GetOldestIP()
 		if err != nil {
 			env.log.Noticef("Could not get startIP from db (db empty?): %+v", err)
 		}
 		endIP := startIP + (1 << 24) - 1
-		env.log.Noticef("Starting with range %s:%s (%d:%d)", worldping.IPToStr(startIP), worldping.IPToStr(endIP), startIP, endIP)
+		env.log.Noticef("Starting with range %s:%s (%d:%d)", utils.IPToStr(startIP), utils.IPToStr(endIP), startIP, endIP)
 
 		for curIP := startIP; curIP <= endIP; curIP++ {
 			select {
-			case tasksCh <- worldping.Task{IP: curIP}:
+			case tasksCh <- types.Task{IP: curIP}:
 				env.log.Debugf("getTasks: Sending task with ip=%d", curIP)
 			case <-env.ctx.Done():
 				return
@@ -116,7 +117,7 @@ func (env *envStruct) getTasks(tasksCh chan worldping.Task) {
 	}
 }
 
-func (env *envStruct) pingf(ip uint32, resultCh chan worldping.Task, guard chan struct{}) {
+func (env *envStruct) pingf(ip uint32, resultCh chan types.Task, guard chan struct{}) {
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, ip)
 
@@ -132,11 +133,11 @@ func (env *envStruct) pingf(ip uint32, resultCh chan worldping.Task, guard chan 
 	}
 	env.log.Debugf("pingf: %d : %v", ip, success)
 
-	resultCh <- worldping.Task{IP: ip, Ping: success}
+	resultCh <- types.Task{IP: ip, Ping: success}
 	<-guard
 }
 
-func (env *envStruct) schedule(taskCh, resultCh chan worldping.Task, loadCh chan float64) {
+func (env *envStruct) schedule(taskCh, resultCh chan types.Task, loadCh chan float64) {
 	ticker := time.NewTicker(10 * time.Second)
 	var curLoad float64
 	var maxGoroutines = 1000
@@ -163,10 +164,10 @@ func (env *envStruct) schedule(taskCh, resultCh chan worldping.Task, loadCh chan
 	}
 }
 
-func (env *envStruct) sendStat(resultCh chan worldping.Task) {
+func (env *envStruct) sendStat(resultCh chan types.Task) {
 	defer env.wg.Done()
 
-	sendStatFunc := func(env *envStruct, results worldping.Tasks, guard chan struct{}) {
+	sendStatFunc := func(env *envStruct, results types.Tasks, guard chan struct{}) {
 		pinged := 0
 		var maxIP uint32
 		for _, r := range results {
@@ -177,14 +178,14 @@ func (env *envStruct) sendStat(resultCh chan worldping.Task) {
 				maxIP = r.IP
 			}
 		}
-		env.log.Noticef("Saving results to DB: total %d, pinged %d, maxIP %v (%d)", len(results), pinged, worldping.IPToStr(maxIP), maxIP)
+		env.log.Noticef("Saving results to DB: total %d, pinged %d, maxIP %v (%d)", len(results), pinged, utils.IPToStr(maxIP), maxIP)
 		if err := env.dbConn.Save(results); err != nil {
 			env.log.Errorf("Problem at saving result to database: %s", err)
 		}
 		<-guard
 	}
 
-	results := make([]worldping.Task, dbPublishSize)
+	results := make([]types.Task, dbPublishSize)
 	i := 0
 	guard := make(chan struct{}, 20)
 
@@ -196,7 +197,7 @@ func (env *envStruct) sendStat(resultCh chan worldping.Task) {
 			if i == dbPublishSize {
 				guard <- struct{}{}
 				go sendStatFunc(env, results, guard)
-				results = make([]worldping.Task, dbPublishSize)
+				results = make([]types.Task, dbPublishSize)
 				i = 0
 				env.log.Noticef("DB Goroutines: %d", len(guard))
 			}
@@ -272,8 +273,8 @@ func main() {
 		env.log.Fatalf("Wrong value maxLoad=%v (should be between 0 and 100)", maxLoad)
 	}
 
-	taskCh := make(chan worldping.Task)
-	resultCh := make(chan worldping.Task)
+	taskCh := make(chan types.Task)
+	resultCh := make(chan types.Task)
 	loadCh := make(chan float64)
 	env.gracefulCh = make(chan os.Signal)
 

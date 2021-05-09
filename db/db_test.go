@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/nanorobocop/worldping/worldping"
+	"github.com/nanorobocop/worldping/pkg/types"
 )
 
 func TestIntUintIntegrational(t *testing.T) {
@@ -44,7 +44,7 @@ func TestIntUintIntegrational(t *testing.T) {
 			t.Fatalf("Cannot create table: %+v", err)
 		}
 
-		results := worldping.Tasks{{IP: test}}
+		results := types.Tasks{{IP: test}}
 		db.Save(results)
 		actual, _ := db.GetMaxIP()
 		if actual != test {
@@ -60,17 +60,17 @@ func TestGetOldestIntegrational(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
-	resultsExceptLast := make([]worldping.Task, 255)
+	resultsExceptLast := make([]types.Task, 255)
 	for i := range resultsExceptLast {
-		resultsExceptLast[i] = worldping.Task{IP: uint32(i * 1 << 24)}
+		resultsExceptLast[i] = types.Task{IP: uint32(i * 1 << 24)}
 	}
 
 	steps := []struct {
-		results  []worldping.Tasks
+		results  []types.Tasks
 		expected uint32
 	}{
 		{
-			results: []worldping.Tasks{
+			results: []types.Tasks{
 				resultsExceptLast,
 			},
 			expected: uint32(1<<32 - 1<<24),

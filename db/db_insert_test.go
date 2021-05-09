@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/nanorobocop/worldping/worldping"
+	"github.com/nanorobocop/worldping/pkg/types"
+	"github.com/nanorobocop/worldping/pkg/utils"
 )
 
 func TestDBInsert(t *testing.T) {
@@ -26,9 +27,9 @@ func TestDBInsert(t *testing.T) {
 	}
 
 	t.Logf("Preparing results")
-	results := make([]worldping.Task, 1<<15-1)
+	results := make([]types.Task, 1<<15-1)
 	for i := range results {
-		results[i] = worldping.Task{IP: uint32(i)}
+		results[i] = types.Task{IP: uint32(i)}
 	}
 
 	db.Open()
@@ -40,7 +41,7 @@ func TestDBInsert(t *testing.T) {
 	valueArgs := make([]interface{}, 0, len(results)*2)
 	for i, result := range results {
 		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, CURRENT_TIMESTAMP)", i*2+1, i*2+2)) // 0 -> ($1, $2), 1 -> ($3, $4), 2 -> ($5, $6)
-		valueArgs = append(valueArgs, worldping.UintToInt(result.IP))
+		valueArgs = append(valueArgs, utils.UintToInt(result.IP))
 		valueArgs = append(valueArgs, result.Ping)
 	}
 	// worldping=> INSERT INTO worldping  (ip, ping) VALUES (1, false),(2,false) ON CONFLICT (ip) DO UPDATE SET ping = excluded.ping ;
@@ -75,9 +76,9 @@ func TestDBBulkInsert(t *testing.T) {
 	}
 
 	t.Logf("Preparing results")
-	results := make([]worldping.Task, 1<<24)
+	results := make([]types.Task, 1<<24)
 	for i := range results {
-		results[i] = worldping.Task{IP: uint32(i)}
+		results[i] = types.Task{IP: uint32(i)}
 	}
 
 	db.Open()

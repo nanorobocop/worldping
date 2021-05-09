@@ -5,7 +5,6 @@ github.com/StackExchange/wmi
 ## explicit
 github.com/apsdehal/go-logger
 # github.com/digineo/go-logwrap v0.0.0-20181106161722-a178c58ea3f0
-## explicit
 github.com/digineo/go-logwrap
 # github.com/digineo/go-ping v1.0.1
 ## explicit

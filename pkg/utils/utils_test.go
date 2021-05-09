@@ -1,4 +1,4 @@
-package worldping
+package utils
 
 import "testing"
 

@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	worldping "github.com/nanorobocop/worldping/worldping"
+	types "github.com/nanorobocop/worldping/pkg/types"
 )
 
 // MockDB is a mock of DB interface.
@@ -121,7 +121,7 @@ func (mr *MockDBMockRecorder) Ping() *gomock.Call {
 }
 
 // Save mocks base method.
-func (m *MockDB) Save(arg0 worldping.Tasks) error {
+func (m *MockDB) Save(arg0 types.Tasks) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", arg0)
 	ret0, _ := ret[0].(error)

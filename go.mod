@@ -11,5 +11,5 @@ require (
 	github.com/lib/pq v1.10.1
 	github.com/shirou/gopsutil v3.21.4+incompatible
 	golang.org/x/net v0.0.0-20210505214959-0714010a04ed // indirect
-	golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
